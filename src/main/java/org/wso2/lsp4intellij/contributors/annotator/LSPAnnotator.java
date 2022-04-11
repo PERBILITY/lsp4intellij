@@ -25,6 +25,7 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
+import com.intellij.util.SmartList;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.eclipse.lsp4j.DiagnosticTag;
@@ -159,9 +160,13 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
         }
         final TextRange range = new TextRange(start, end);
 
-        return holder.newAnnotation(lspToIntellijAnnotationsMap.get(diagnostic.getSeverity()), diagnostic.getMessage())
+        // Revert change from c05c7abe because createAnnotation() causes deprecation exception
+        holder.newAnnotation(lspToIntellijAnnotationsMap.get(diagnostic.getSeverity()), diagnostic.getMessage())
                 .range(range)
-                .createAnnotation();
+                .create();
+        SmartList<Annotation> asList = (SmartList<Annotation>) holder;
+
+        return asList.get(asList.size() - 1);
     }
 
     private void createAnnotations(AnnotationHolder holder, EditorEventManager eventManager) {
