@@ -237,7 +237,7 @@ public class LSPServerStatusWidget implements StatusBarWidget {
         public String getTooltipText() {
             LanguageServerWrapper wrapper = LanguageServerWrapper.forProject(project);
             if (wrapper == null) {
-                return "Language server, project " + projectName;
+                return "Language server wrapper is null for project " + projectName;
             } else {
                 return "Language server for extension " + wrapper.getServerDefinition().ext + ", project " + projectName;
             }
