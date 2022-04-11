@@ -40,7 +40,6 @@ import org.wso2.lsp4intellij.utils.DocumentUtils;
 import org.wso2.lsp4intellij.utils.FileUtils;
 
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -90,7 +89,14 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
 
     @Override
     public void apply(@NotNull PsiFile file, Object annotationResult, @NotNull AnnotationHolder holder) {
-
+        if (file.getVirtualFile() == null) {
+            LOG.warn("file == null || file.getVirtualFile() == null || file.getProject() == null: "  + this);
+            return;
+        }
+        if (LanguageServerWrapper.forVirtualFile(file.getVirtualFile(), file.getProject()) == null) {
+            LOG.warn("LanguageServerWrapper.forVirtualFile(file.getVirtualFile(), file.getProject()): "  + this);
+            return;
+        }
         if (LanguageServerWrapper.forVirtualFile(file.getVirtualFile(), file.getProject()).getStatus() != ServerStatus.INITIALIZED) {
             return;
         }
