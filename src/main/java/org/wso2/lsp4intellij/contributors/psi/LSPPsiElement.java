@@ -48,12 +48,19 @@ import com.intellij.psi.search.SearchScope;
 import com.intellij.util.IncorrectOperationException;
 import com.intellij.util.concurrency.AtomicFieldUpdater;
 import com.intellij.util.keyFMap.KeyFMap;
+import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.Range;
 import org.jetbrains.annotations.NotNull;
-import org.wso2.lsp4intellij.utils.ApplicationUtils;
+import org.wso2.lsp4intellij.editor.EditorEventManager;
+import org.wso2.lsp4intellij.editor.EditorEventManagerBase;
+import org.wso2.lsp4intellij.utils.DocumentUtils;
 import org.wso2.lsp4intellij.utils.FileUtils;
 
 import javax.annotation.Nullable;
 import javax.swing.*;
+
+import static org.wso2.lsp4intellij.utils.ApplicationUtils.invokeAfterPsiEvents;
+import static org.wso2.lsp4intellij.utils.ApplicationUtils.writeAction;
 
 /**
  * A simple PsiElement for LSP
@@ -720,13 +727,28 @@ public class LSPPsiElement implements PsiNameIdentifierOwner, NavigatablePsiElem
     }
 
     public void navigate(boolean requestFocus) {
-        Editor editor = FileUtils.editorFromPsiFile(getContainingFile());
-        if (editor == null) {
-            OpenFileDescriptor descriptor = new OpenFileDescriptor(getProject(), getContainingFile().getVirtualFile(),
-                    getTextOffset());
-            ApplicationUtils.invokeLater(() -> ApplicationUtils
-                    .writeAction(() -> FileEditorManager.getInstance(getProject()).openTextEditor(descriptor, false)));
-        }
+        writeAction(() -> {
+            Editor editor = FileUtils.editorFromPsiFile(getContainingFile());
+            if (editor == null) {
+                OpenFileDescriptor descriptor = new OpenFileDescriptor(getProject(), getContainingFile().getVirtualFile(),
+                        getTextOffset());
+
+                editor = FileEditorManager.getInstance(getProject()).openTextEditor(descriptor, false);
+            }
+
+            Editor finalEditor = editor;
+            invokeAfterPsiEvents(() -> {
+                EditorEventManager manager = EditorEventManagerBase.forEditor(finalEditor);
+                if (manager != null) {
+                    manager.gotoLocation(
+                            new Location(
+                                    FileUtils.uriFromVirtualFile(getContainingFile().getVirtualFile()),
+                                    new Range(
+                                            DocumentUtils.offsetToLSPPos(finalEditor, this.start),
+                                            DocumentUtils.offsetToLSPPos(finalEditor, this.end))));
+                }
+            });
+        });
     }
 
     /**

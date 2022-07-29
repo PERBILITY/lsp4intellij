@@ -25,6 +25,7 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
+import com.intellij.util.SmartList;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.eclipse.lsp4j.DiagnosticTag;
@@ -39,7 +40,6 @@ import org.wso2.lsp4intellij.utils.DocumentUtils;
 import org.wso2.lsp4intellij.utils.FileUtils;
 
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -75,10 +75,6 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
                 return null;
             }
 
-            // If the diagnostics list is locked, we need to skip annotating the file.
-            if (!(eventManager.isDiagnosticSyncRequired() || eventManager.isCodeActionSyncRequired())) {
-                return null;
-            }
             return RESULT;
         } catch (Exception e) {
             return null;
@@ -93,7 +89,14 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
 
     @Override
     public void apply(@NotNull PsiFile file, Object annotationResult, @NotNull AnnotationHolder holder) {
-
+        if (file.getVirtualFile() == null) {
+            LOG.warn("file == null || file.getVirtualFile() == null || file.getProject() == null: "  + this);
+            return;
+        }
+        if (LanguageServerWrapper.forVirtualFile(file.getVirtualFile(), file.getProject()) == null) {
+            LOG.warn("LanguageServerWrapper.forVirtualFile(file.getVirtualFile(), file.getProject()): "  + this);
+            return;
+        }
         if (LanguageServerWrapper.forVirtualFile(file.getVirtualFile(), file.getProject()).getStatus() != ServerStatus.INITIALIZED) {
             return;
         }
@@ -104,6 +107,13 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
             // TODO annotations are applied to a file / document not to an editor. so store them by file and not by editor..
             EditorEventManager eventManager = EditorEventManagerBase.forUri(uri);
 
+            // If the diagnostics list is locked, we need to skip annotating the file.
+            if (!(eventManager.isDiagnosticSyncRequired() || eventManager.isCodeActionSyncRequired())) {
+               // return;
+            }
+
+            createAnnotations(holder, eventManager);
+/*
             if (eventManager.isCodeActionSyncRequired()) {
                 try {
                     updateAnnotations(holder, eventManager);
@@ -122,7 +132,13 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
                 } catch (Throwable t) {
                     LOG.warn("Error occurred when updating LSP code actions.", t);
                 }
+            } else{
+                LOG.warn("no annotations");
             }
+
+ */
+        }else{
+            LOG.warn("no annotations");
         }
     }
 
@@ -150,9 +166,13 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
         }
         final TextRange range = new TextRange(start, end);
 
-        return holder.newAnnotation(lspToIntellijAnnotationsMap.get(diagnostic.getSeverity()), diagnostic.getMessage())
+        // Revert change from c05c7abe because createAnnotation() causes deprecation exception
+        holder.newAnnotation(lspToIntellijAnnotationsMap.get(diagnostic.getSeverity()), diagnostic.getMessage())
                 .range(range)
-                .createAnnotation();
+                .create();
+        SmartList<Annotation> asList = (SmartList<Annotation>) holder;
+
+        return asList.get(asList.size() - 1);
     }
 
     private void createAnnotations(AnnotationHolder holder, EditorEventManager eventManager) {
