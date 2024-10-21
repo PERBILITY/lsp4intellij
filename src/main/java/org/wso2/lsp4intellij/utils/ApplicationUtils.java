@@ -16,6 +16,7 @@
 package org.wso2.lsp4intellij.utils;
 
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.NoAccessDuringPsiEvents;
 import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.util.Condition;
@@ -25,6 +26,7 @@ import java.util.concurrent.Executors;
 
 public class ApplicationUtils {
 
+    private static final Logger LOG = Logger.getInstance(ApplicationUtils.class);
     private final static ExecutorService EXECUTOR_SERVICE;
 
     static {
@@ -45,7 +47,11 @@ public class ApplicationUtils {
     }
 
     static public void pool(Runnable runnable) {
-        EXECUTOR_SERVICE.submit(runnable);
+        try {
+            EXECUTOR_SERVICE.submit(runnable);
+        } catch(Exception e) {
+            LOG.warn(e + ": ApplicationUtils");
+        }
     }
 
     static public <T> T computableReadAction(Computable<T> computable) {

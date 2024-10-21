@@ -56,13 +56,13 @@ public class ProcessStreamConnectionProvider implements StreamConnectionProvider
 
     public void start() throws IOException {
         if ((workingDir == null || commands == null || commands.isEmpty() || commands.contains(null)) && builder == null) {
-            throw new IOException("Unable to start language server: " + this.toString());
+            throw new IOException("Unable to start language server: " + this);
         }
         ProcessBuilder builder = createProcessBuilder();
         LOG.info("Starting server process with commands " + commands + " and workingDir " + workingDir);
         process = builder.start();
         if (!process.isAlive()) {
-            throw new IOException("Unable to start language server: " + this.toString());
+            throw new IOException("Unable to start language server, process is not alive: " + this);
         } else {
             LOG.info("Server process started " + process);
         }

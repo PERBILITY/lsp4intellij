@@ -21,6 +21,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.components.ServiceManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
@@ -54,6 +55,7 @@ import javax.swing.*;
 
 public class LSPServerStatusWidget implements StatusBarWidget {
 
+    private static final Logger LOG = Logger.getInstance(LSPServerStatusWidget.class);
     private final Map<Timeouts, Pair<Integer, Integer>> timeouts = new HashMap<>();
     private final Project project;
     private final String projectName;
@@ -112,7 +114,11 @@ public class LSPServerStatusWidget implements StatusBarWidget {
             if (statusBar != null)
                 ApplicationUtils.invokeLater(() -> {
                     StatusBarWidgetFactory factory = ServiceManager.getService(StatusBarWidgetFactory.class);
-                    factory.disposeWidget(this);
+                    if (factory != null) {
+                        factory.disposeWidget(this);
+                    } else {
+                        LOG.warn("factory is null in dispose(): " + this);
+                    }
                 });
         }
     }
@@ -147,6 +153,10 @@ public class LSPServerStatusWidget implements StatusBarWidget {
                 JBPopupFactory.ActionSelectionAid mnemonics = JBPopupFactory.ActionSelectionAid.MNEMONICS;
                 Component component = t.getComponent();
                 List<AnAction> actions = new ArrayList<>();
+                if (LanguageServerWrapper.forProject(project) == null) {
+                    LOG.warn("LanguageServerWrapper.forProject(project) is null: " + this);
+                    return;
+                }
                 if (LanguageServerWrapper.forProject(project).getStatus() == ServerStatus.INITIALIZED) {
                     actions.add(new ShowConnectedFiles());
                 }
@@ -227,7 +237,7 @@ public class LSPServerStatusWidget implements StatusBarWidget {
         public String getTooltipText() {
             LanguageServerWrapper wrapper = LanguageServerWrapper.forProject(project);
             if (wrapper == null) {
-                return "Language server, project " + projectName;
+                return "Language server wrapper is null for project " + projectName;
             } else {
                 return "Language server for extension " + wrapper.getServerDefinition().ext + ", project " + projectName;
             }
