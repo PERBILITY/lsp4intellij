@@ -93,11 +93,8 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
             LOG.warn("file == null || file.getVirtualFile() == null || file.getProject() == null: "  + this);
             return;
         }
-        if (LanguageServerWrapper.forVirtualFile(file.getVirtualFile(), file.getProject()) == null) {
-            LOG.warn("LanguageServerWrapper.forVirtualFile(file.getVirtualFile(), file.getProject()): "  + this);
-            return;
-        }
-        if (LanguageServerWrapper.forVirtualFile(file.getVirtualFile(), file.getProject()).getStatus() != ServerStatus.INITIALIZED) {
+        LanguageServerWrapper languageServerWrapper = LanguageServerWrapper.forVirtualFile(file.getVirtualFile(), file.getProject());
+        if (languageServerWrapper == null || languageServerWrapper.getStatus() != ServerStatus.INITIALIZED) {
             return;
         }
 
